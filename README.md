@@ -6,7 +6,6 @@ A real-time, three-tier hardware telemetry pipeline for the CMS Inner Tracker (`
 
 ## 🏗️ Architecture Overview
 
-+------------------+         +--------------------+         +--------------------+         +--------------------+|     Ph2_ACF      |  log    | log_to_csv_2.6.py  |  write  | csv_chunker_0.4.py |  chunk  |   exporter_2.4.py  || (DAQ / Telemetry)| ------> | (Telemetry Parser) | ------> |  (Batch Chunker)   | ------> |(Prometheus Exporter|+------------------+         +--------------------+         +--------------------+         +--------------------+|                              |                              |v                              v                              vmonitoring_FULL.csv              /chunks/*.csv                  HTTP :8000|vPrometheus & Grafana
 1. **Parser (`log_to_csv_2.6.py`)**: Tails `Ph2_ACF` logs, decodes hardware hierarchies (Board, Hybrid, Chip, eFuse), converts CROC register values, and calibrates uncalibrated LpGBT ADC channels.
 2. **Chunker (`csv_chunker_0.4.py`)**: Groups complete telemetry cycles into dynamic CSV chunks using signature checking, while preventing disk saturation via atomic truncation (`max_mb`).
 3. **Exporter (`exporter_2.4.py`)**: Consumes CSV chunks, exposes Prometheus Gauges, and automatically evicts stale metrics (`stale_after`) to avoid persistent "ghost" values when DAQ stops.
