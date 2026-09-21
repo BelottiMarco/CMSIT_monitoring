@@ -18,8 +18,8 @@ A real-time, three-tier hardware telemetry pipeline for the CMS Inner Tracker (`
 * **Dependencies**:
   ```bash
   pip install prometheus_client pandas numpy
-## ⚙️ Configuration (monitoring.ini)All modules share a single configuration file. Create a file named monitoring.ini in your working directory:Ini, TOML[paths]
-# Path where Ph2_ACF writes logs or where raw stdout is saved
+## Configuration (monitoring.ini)All modules share a single configuration file. Create a file named monitoring.ini in your working directory:Ini, TOML[paths]
+### Path where Ph2_ACF writes logs or where raw stdout is saved
 log_file = /path/to/Ph2_ACF.log
 ### Directory where intermediate CSV chunks will be stored
 output_csv_dir = ./MonitoringCSV
