@@ -146,6 +146,8 @@ entirely with `--config /path/to/other.ini`.
 calibration is skipped with a warning rather than failing — uncalibrated LpGBT ADC
 channels will simply pass through unconverted.
 
+Modify in the `csv_schema.py` the list of problematic ADC corresponding to each LpGBT eFuse for the actual setup.
+
 ## Quick start
 
 Launch all three stages, each in its own terminal (it's better to launch the `exporter.py` with `nohup ... &`), in this
