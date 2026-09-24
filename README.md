@@ -4,7 +4,7 @@ Real-time extraction of hardware monitoring data (temperatures, voltages, curren
 from `Ph2_ACF`'s run `LOG`, exposed as live Prometheus metrics for Grafana dashboards.
 
 > For the physics/detector background, the full design rationale, and validation
-> results, see [`report.pdf`](./report.pdf).
+> results, see [`CMSIT_MONITORING_REPORT.pdf`](./CMSIT_MONITORING_REPORT.pdf).
 > This README only covers what you need to install, configure, and run the code.
 
 ## Architecture Overview
