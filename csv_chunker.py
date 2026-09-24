@@ -5,11 +5,8 @@ import datetime
 import os
 from pathlib import Path
 
-FIELDNAMES = [
-    "BOARD", "OPTICAL_GROUP", "PORTCARD_ID", "LpGBT_EFUSE",
-    "HYBRID_ID", "CHIP", "CHIP_EFUSE", "MODULE_ID",
-    "DATE", "TIME", "REGISTER", "VALUE", "ERROR", "UNIT"
-]
+from config_loader import load_config, cfg
+from csv_schema import FIELDNAMES
 
 class ChunkWriter:
     def __init__(self, chunk_dir, fieldnames):
@@ -164,11 +161,35 @@ def tail_and_reduce(file_path, writer, max_mb=1.0, debug_csv_path=None):
             
             
 if __name__ == "__main__":
+    config, config_path = load_config()
+
+    # input_csv and chunk_dir are both DERIVED from the same [paths]
+    # output_csv_dir that log_to_csv.py uses - so this stays in sync with
+    # log_to_csv.py automatically instead of needing the same base path
+    # retyped identically on both command lines.
+    output_csv_dir = cfg(config, "paths", "output_csv_dir", fallback="./MonitoringCSV")
+    output_csv_name = cfg(config, "log_to_csv", "output_csv_name", fallback="monitoring_FULL.csv")
+    default_input_csv = f"{output_csv_dir}/{output_csv_name}"
+    default_chunk_dir = f"{output_csv_dir}/chunks"
+
+    default_debug_csv = cfg(config, "csv_chunker", "debug_csv", fallback=None)
+    if default_debug_csv:
+        default_debug_csv = f"{output_csv_dir}/{default_debug_csv}"
+
     parser = argparse.ArgumentParser(description="Tail and reduce a full CSV and produce chunked CSVs for Prometheus based on register reading cycles.")
-    parser.add_argument("--input_csv", type=str, required=True, help="Path to the full CSV file to monitor")
-    parser.add_argument("--chunk_dir", type=str, required=True, help="Directory to save partial chunked CSVs")
-    parser.add_argument("--max_mb", type=float, default=1.0, help="Maximum size in MB before truncating the input CSV file")
-    parser.add_argument("--debug_csv", type=str, default=None, help="Optional path to save the FULL debug history without ever truncating it")
+    parser.add_argument("--config", type=str, default=config_path,
+                         help="Path to the shared monitoring.ini (default: ./monitoring.ini or $MONITORING_CONFIG)")
+    parser.add_argument("--input_csv", type=str, default=default_input_csv,
+                         help="Path to the full CSV file to monitor "
+                              "(default: derived from [paths] output_csv_dir + [log_to_csv] output_csv_name)")
+    parser.add_argument("--chunk_dir", type=str, default=default_chunk_dir,
+                         help="Directory to save partial chunked CSVs "
+                              "(default: {output_csv_dir}/chunks - same directory exporter.py should point at)")
+    parser.add_argument("--max_mb", type=float,
+                         default=cfg(config, "csv_chunker", "max_mb", fallback=1.0, kind=float),
+                         help="Maximum size in MB before truncating the input CSV file")
+    parser.add_argument("--debug_csv", type=str, default=default_debug_csv,
+                         help="Optional path to save the FULL debug history without ever truncating it")
     
     args = parser.parse_args()
     

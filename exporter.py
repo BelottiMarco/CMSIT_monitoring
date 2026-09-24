@@ -6,6 +6,8 @@ from prometheus_client.core import GaugeMetricFamily, REGISTRY
 import glob
 import os
 
+from config_loader import load_config, cfg
+
 class ChunkCollector:
     def __init__(self, chunk_dir, stale_after=150):
         self.chunk_dir = chunk_dir
@@ -88,9 +90,20 @@ def parse_numeric(val):
         return None
 
 if __name__ == '__main__':
+    config, config_path = load_config()
+
+    # Derived from the SAME [paths] output_csv_dir as csv_chunker.py's
+    # --chunk_dir default, so the two stay in agreement automatically.
+    output_csv_dir = cfg(config, "paths", "output_csv_dir", fallback="./MonitoringCSV")
+    default_csv_dir = f"{output_csv_dir}/chunks"
+
     parser = argparse.ArgumentParser(description="Upload data to Prometheus in real-time.")
-    parser.add_argument("--csv_dir", type=str, required=True, help="Path to chunk directory")
-    parser.add_argument("--stale_after", type=int, default=150,
+    parser.add_argument("--config", type=str, default=config_path,
+                         help="Path to the shared monitoring.ini (default: ./monitoring.ini or $MONITORING_CONFIG)")
+    parser.add_argument("--csv_dir", type=str, default=default_csv_dir,
+                         help="Path to chunk directory (default: {output_csv_dir}/chunks)")
+    parser.add_argument("--stale_after", type=int,
+                         default=cfg(config, "exporter", "stale_after", fallback=150, kind=int),
                          help="Seconds without a fresh reading before a series is dropped "
                               "(default: 150). Set this comfortably above the slowest "
                               "register's real read interval, or it will be pruned as "

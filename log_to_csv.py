@@ -13,35 +13,14 @@ import subprocess
 import signal
 import sys
 
+from config_loader import load_config, cfg
+from csv_schema import FIELDNAMES
+from csv_schema import CROC_REGISTERS
+from csv_schema import LPGBT_ADC_REGISTERS, LPGBT_VOLTAGE_REGISTERS, PROBLEMATIC_LPGBT_ADC_REGISTER
+
 # --- DEFAULT CONFIGURATIONS ---
 PH2_ACF_DIRECTORY = "/home/bootcamp/marco/Ph2_ACF_1/Ph2_ACF/"
 CSV_DIRECTORY  = "./MonitoringCSV"
-FIELDNAMES = [
-    "BOARD", "OPTICAL_GROUP", "PORTCARD_ID", "LpGBT_EFUSE",
-    "HYBRID_ID", "CHIP", "CHIP_EFUSE", "MODULE_ID",
-    "DATE", "TIME", "REGISTER", "VALUE", "ERROR", "UNIT"
-]
-
-# List of CROC register to search
-CROC_REGISTERS = [
-    "VINA", "VDDA", "ANA_IN_CURR", "VIND", "VDDD", "DIG_IN_CURR", "Iref",
-    "POLY_REL_TEMPSENS_TOP", "POLY_REL_TEMPSENS_BOTTOM", "POLY_ABS_TEMPSENS_TOP",
-    "POLY_ABS_TEMPSENS_BOTTOM", "TEMPSENS_ANA_SLDO", "TEMPSENS_DIG_SLDO",
-    "TEMPSENS_CENTER", "INTERNAL_NTC_REL", "INTERNAL_NTC_ABS",
-    "Hybrid voltage", "Hybrid temperature"
-]
-
-# List of LpGBT ADC register to search
-LPGBT_ADC_REGISTERS = ["ADC0", "ADC1", "ADC2", "ADC3", "ADC4", "ADC5", "ADC6", "ADC7"]
-# List of LpGBT Voltage register to search
-LPGBT_VOLTAGE_REGISTERS = ["VDDIO", "VDDTX", "VDDRX", "VDD", "VDDA"]
-
-# Mappatura dei canali da convertire da raw ADC a Volts per ciascun eFuse
-PROBLEMATIC_LPGBT_ADC_REGISTER = {
-    '922CE0AE': [0, 1, 2, 3, 4, 5, 7],
-    '52AE68FD': [   1, 2, 3, 4, 5, 7],
-    '52AE2086': [0, 1, 2, 3, 4, 5, 7],
-}
 
 ANSI_ESCAPE_REGEX = re.compile(r"\x1b\[[0-9;]*[a-zA-Z]")
 
@@ -112,7 +91,6 @@ def croc_register_conversion(reg, val):
     elif reg == 'ANA_IN_CURR': return str(float(val)*21000)
     elif reg == 'DIG_IN_CURR': return str(float(val)*21000)
     else:                      return val
-
 
 def clean_line(line):
     """Remove ANSI color escape sequences from a log line."""
@@ -446,23 +424,48 @@ def write_run_number(ph2_acf_test_dir, new_run_number):
         f.write(f"{new_run_number:06d}")
 
 if __name__ == "__main__":
+    config, config_path = load_config()
+
     parser = argparse.ArgumentParser(description="Parse Ph2_ACF log files into a continuous Full CSV.")
-    
+    parser.add_argument("--config", type=str, default=config_path,
+                        help="Path to the shared monitoring.ini (default: ./monitoring.ini or $MONITORING_CONFIG)")
+
     # for Ph2_ACF configuration
-    parser.add_argument("--calibration",        type=str, default="physics", help="Choose the calibration to run in Ph2_ACF (default: physics)")
-    parser.add_argument("--Ph2_ACF_dir",        type=str, default=PH2_ACF_DIRECTORY, help="Path to the Ph2_ACF directory (containing settings/ and test/)")
+    parser.add_argument("--calibration",        type=str,
+                        default=cfg(config, "log_to_csv", "calibration", fallback="physics"),
+                        help="Choose the calibration to run in Ph2_ACF (default: physics)")
+    parser.add_argument("--xml_file",           type=str,
+                        default=cfg(config, "log_to_csv", "calibration", fallback="CMSIT_gtx0.xml"),
+                        help="Choose the configuration file for running Ph2_ACF (default: CMSIT_gtx0.xml)")
+    parser.add_argument("--Ph2_ACF_dir",        type=str,
+                        default=cfg(config, "paths", "ph2_acf_dir", fallback=PH2_ACF_DIRECTORY),
+                        help="Path to the Ph2_ACF directory (containing settings/ and test/)")
     # for csv_output file
-    parser.add_argument("--output_csv_dir",     type=str, default=CSV_DIRECTORY, help="Path to output CSV directory (default: ./MonitoringCSV)")
-    parser.add_argument("--output_csv_name",    type=str, default="monitoring_FULL.csv", help="Name of the output CSV file. -1 for using the run number name (default: monitoring_FULL.csv)")
+    parser.add_argument("--output_csv_dir",     type=str,
+                        default=cfg(config, "paths", "output_csv_dir", fallback=CSV_DIRECTORY),
+                        help="Path to output CSV directory (default: ./MonitoringCSV)")
+    parser.add_argument("--output_csv_name",    type=str,
+                        default=cfg(config, "log_to_csv", "output_csv_name", fallback="monitoring_FULL.csv"),
+                        help="Name of the output CSV file. -1 for using the run number name (default: monitoring_FULL.csv)")
     # for old runs
-    parser.add_argument("--log_time",           action="store_true", default=False, help="Use old-time date/time of the log lines.")
+    parser.add_argument("--log_time",           action=argparse.BooleanOptionalAction,
+                        default=cfg(config, "log_to_csv", "log_time", fallback=False, kind=bool),
+                        help="Use old-time date/time of the log lines.")
     parser.add_argument("--run",                type=int, default=-1, help="Run number. If omitted (or -1), auto-detected from RunNumber.txt in --Ph2_ACF_dir.")
     parser.add_argument("--date",               type=str, default=datetime.datetime.now().strftime("%Y-%m-%d"), help="Date of the log (to be added in the CSV)")  
     # for debugging and execution control
-    parser.add_argument("--terminal_Ph2_ACF",   action="store_true", default=False, help="Save what printed out at terminal by Ph2_ACF in a .log file (for debugging)")
-    parser.add_argument("--timeout",            type=int, default=300, help="Inactivity timeout in seconds, from log file lines (default: 300, set 0 to disable)")
-    parser.add_argument("--heartbeat_seconds",  type=int, default=120, help="Print a status line every N seconds even when nothing changes (default: 120, set 0 to disable)")
-    parser.add_argument("--no_launch",          action="store_true", help="Esegue solo il parsing senza lanciare Ph2_ACF")
+    parser.add_argument("--terminal_Ph2_ACF",   action=argparse.BooleanOptionalAction,
+                        default=cfg(config, "log_to_csv", "terminal_ph2_acf", fallback=False, kind=bool),
+                        help="Save what printed out at terminal by Ph2_ACF in a .log file (for debugging)")
+    parser.add_argument("--timeout",            type=int,
+                        default=cfg(config, "log_to_csv", "timeout", fallback=300, kind=int),
+                        help="Inactivity timeout in seconds, from log file lines (default: 300, set 0 to disable)")
+    parser.add_argument("--heartbeat_seconds",  type=int,
+                        default=cfg(config, "log_to_csv", "heartbeat_seconds", fallback=120, kind=int),
+                        help="Print a status line every N seconds even when nothing changes (default: 120, set 0 to disable)")
+    parser.add_argument("--no_launch",          action=argparse.BooleanOptionalAction,
+                        default=cfg(config, "log_to_csv", "no_launch", fallback=False, kind=bool),
+                        help="Run parsing only, without launching Ph2_ACF")
     
     args = parser.parse_args()
     
@@ -470,13 +473,14 @@ if __name__ == "__main__":
     
     # Directory of execution
     Ph2_ACF_test_dir = args.Ph2_ACF_dir + 'test/'
+    xml_path = Ph2_ACF_test_dir + args.xml_file
 
     # Call Ph2_ACF from terminal
     command = (
         f"cd {args.Ph2_ACF_dir} && "
         "source setup.sh && "
         f"cd {Ph2_ACF_test_dir} && "
-        f"exec CMSITminiDAQ -f CMSIT_gtx0.xml -c {args.calibration}"
+        f"exec CMSITminiDAQ -f {xml_path} -c {args.calibration}"
     )
     
     
