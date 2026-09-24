@@ -48,7 +48,7 @@ produced.
 ├── auto_vtrx_calib.py               # Example of multiple calibration and parsing with log_to_csv.py
 ├── report.pdf                       # Full technical report (physics context, code design and pipeline, results)
 ├── prometheus.yml (example)         # See "Prometheus setup" below
-└── Ph2_ACF/                         # XML configuration file for Ph2_ACF used in the project
+└── Ph2_ACF_xml/                     # XML configuration file for Ph2_ACF used in the project
     ├── CMSIT_config_2_CROC_1_LpGBT.xml
     ├── CMSIT_config_3_LpGBT.xml
     └── CMSIT_config_2_LpGBT.xml
