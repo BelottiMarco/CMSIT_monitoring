@@ -173,8 +173,7 @@ because in the laboratory-setup (not exposed to particles) nothing but the monit
 ```bash
 # Re-process an OLD (already-finished) LOG file offline instead of launching Ph2_ACF
 python3 log_to_csv.py --no_launch --run 42 --date 2026-09-01 --log_time
-# (see "Offline LOG parsing" in the report for the prometheus.yml changes needed
-# and use exporter_old_data.py instead of exporter.py)
+# (see "Offline LOG parsing" in the report for the prometheus.yml/exporter.py changes needed)
 
 # Write the Full CSV somewhere else for one run, without touching monitoring.ini
 python3 log_to_csv.py --output_csv_name monitoring_special_run.csv
