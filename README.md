@@ -1,9 +1,9 @@
-# Cross Check of the Hardware Monitoring for the CMS Inner Tracker Upgrade (Ph2_ACF)
+# Cross Check of the Hardware Monitoring for the CMS Inner Tracker Upgrade (`Ph2_ACF`)
 
 Real-time extraction of hardware monitoring data (temperatures, voltages, currents)
 from `Ph2_ACF`'s run `LOG`, exposed as live Prometheus metrics for Grafana dashboards.
 
-> For the physics/detector background, the full design rationale, and validation
+> For the physics/detector background, the full design structure, and validation
 > results, see [`CMSIT_MONITORING_REPORT.pdf`](./CMSIT_MONITORING_REPORT.pdf).
 > This README only covers what you need to install, configure, and run the code.
 
@@ -32,7 +32,7 @@ Prometheus / Grafana
 
 Each stage has exactly one job, and stage 1 is the only one that would need to
 change if `Ph2_ACF` (or the DTC software) is ever modified to write CSV natively
-instead of a `LOG` file — stages 2 and 3 don't know or care how the Full CSV was
+beyond the `LOG` file — stages 2 and 3 don't know or care how the Full CSV was
 produced.
 
 ## Repository structure
@@ -44,10 +44,10 @@ produced.
 ├── exporter.py                      # Stage 3: chunk files -> Prometheus /metrics endpoint
 ├── config_loader.py                 # Shared monitoring.ini loader, used by all three scripts above
 ├── csv_schema.py                    # Shared CSV column layout + register lookup tables
-├── monitoring.ini                   # Default configuration (paths, settings) - edit this first
+├── monitoring.ini                   # Default configuration (paths, settings) <-- edit this first
 ├── auto_vtrx_calib.py               # Example of multiple calibration and parsing with log_to_csv.py
 ├── report.pdf                       # Full technical report (physics context, code design and pipeline, results)
-├── prometheus.yml (example)         # See "Prometheus setup" below
+├── prometheus.yml                   # See "Prometheus setup" below
 └── Ph2_ACF_xml/                     # XML configuration file for Ph2_ACF used in the project
     ├── CMSIT_config_2_CROC_1_LpGBT.xml
     ├── CMSIT_config_3_LpGBT.xml
@@ -56,17 +56,12 @@ produced.
 
 ## Requirements
 
-- Python 3.9+ (uses `argparse.BooleanOptionalAction`, added in 3.9)
+- Python 3.9+ with the following packeges:
+  - ```pandas```
+  - ```prometheus_client```
 - Prometheus and Grafana (in the next section is explained how to install the basic version)
 - A running `Ph2_ACF` installation, if you want `log_to_csv.py` to launch
   `CMSITminiDAQ` itself rather than just parsing an existing `LOG` file
-
-Python packages:
-
-```
-pandas
-prometheus_client
-```
 
 ## Installation
 
